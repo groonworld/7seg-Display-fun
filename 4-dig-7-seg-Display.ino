@@ -33,10 +33,13 @@ void setup() {
 }
 
 void loop() {
-  writeNum(counter++);
-  delay(1000);
+  writeNum(counter++);  //writes the value of counter to the display, then increases its value by 1.
+  delay(100);           // 10Hz
 } 
 
+/* 
+ * Function to write numerical values of up to 4 digits to the display.
+ */
 void writeNum(int value) {
   if (value <= 9 && value >= 0) {
     writeDig(value, 4);
@@ -58,7 +61,8 @@ void writeNum(int value) {
   }
 }
 
-/*  Prints a given value to the specified position on the 4-digit LED display.
+/*  
+ *  Prints a given value to the specified position on the 4-digit LED display.
  *  Value 0-9, otherwise will show '-'.
  *  Pos   1-3, otherwise will print to rightmost digit
  */
