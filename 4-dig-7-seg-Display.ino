@@ -3,19 +3,31 @@
  * 01.03.2020 by pgroon
  */
 
-int pinA = 2;
-int pinB = 3;
-int pinC = 4;
-int pinD = 5;
-int pinE = 6;
-int pinF = 7;
-int pinG = 8;
-int D1 = 9;
-int D2 = 10;
-int D3 = 11;
-int D4 = 12;
+// Pins for the LED display
+const int pinA = 2;
+const int pinB = 3;
+const int pinC = 4;
+const int pinD = 5;
+const int pinE = 6;
+const int pinF = 7;
+const int pinG = 8;
+const int D1 = 9;
+const int D2 = 10;
+const int D3 = 11;
+const int D4 = 12;
 
-int counter = 0;
+// Variables for replacing delay()
+unsigned long prevCounterTime = 0; 
+unsigned long prevDisplayTime = 0;
+
+// Variables for program logic
+int digits[4] = {0, 0, 0, 0};
+int counter = 1;
+byte digitCounter = 0;
+unsigned long nowTime = 0;
+long counterInterval = 1000;
+long displayInterval = 2;
+
 
 void setup() {
   // initialize the digital pins as outputs.
@@ -26,38 +38,57 @@ void setup() {
   pinMode(pinE, OUTPUT);
   pinMode(pinF, OUTPUT);
   pinMode(pinG, OUTPUT);
-  pinMode(D1, OUTPUT);
+  
+  // For common cathode displays, these need to be set to LOW to activate the corresponding segment. For common anode displays, invert all values.
+  pinMode(D1, OUTPUT);    
   pinMode(D2, OUTPUT);
   pinMode(D3, OUTPUT);
   pinMode(D4, OUTPUT);
 }
 
+
 void loop() {
-  writeNum(counter++);  //writes the value of counter to the display, then increases its value by 1.
-  delay(100);           // 10Hz
+  nowTime = millis();
+  writeNum(counter);
+  // This triggers whenever an amount of time larger than INTERVAL has passed
+  if (nowTime - prevCounterTime >= counterInterval) {
+    prevCounterTime = nowTime;
+    counter++;
+  }
 } 
 
-/* 
- * Function to write numerical values of up to 4 digits to the display.
- */
 void writeNum(int value) {
-  if (value <= 9 && value >= 0) {
-    writeDig(value, 4);
-  } else if (value >= 10 && value <= 99) {
-    writeDig((value % 10), 4);
-    writeDig((value / 10), 3);
+  getDigits(value);
+  digitCounter = 0;
+  while (digitCounter < 4) {
+    nowTime = millis();
+    if (nowTime - prevDisplayTime >= displayInterval) {
+      writeDig(digits[digitCounter], digitCounter);
+      digitCounter++;
+      prevDisplayTime = nowTime;
+    }  
+  }
+}
+
+/*
+ * Calculates the individual digits from a given int value and stores them in the digits[] array.
+ */
+void getDigits(int value) {
+  digits[3] = value % 10;             // Get lowest digit
+  if (value >= 10 && value <= 99) {
+    digits[2] = (value / 10);
   } else if (value >= 100 && value <= 999) {
-    writeDig((value % 10)       , 4);
-    writeDig((value / 10) % 10  , 3);
-    writeDig((value / 100) % 10 , 2);
+    digits[2] = (value / 10) % 10;
+    digits[1] = (value / 100);
   } else if (value >= 1000 && value <= 9999) {
-    writeDig((value % 10)       , 4);
-    writeDig((value / 10) % 10  , 3);
-    writeDig((value / 100) % 10 , 2);
-    writeDig((value / 1000)     , 1);
-  } else {          // will display '-  -' for values that exceed display length.
-    writeDig(-1, 1);
-    writeDig(-1, 4);
+    digits[2] = (value / 10) % 10;
+    digits[1] = (value / 100) % 10;
+    digits[0] = (value / 1000);
+  } else if (value >= 10000) {          
+    // For values that exceed display length, this sets all digits to -1, which will display as '-----'.
+    for (byte i = 0; i < 4; i++) {
+      digits[i] = -1;
+    }
   }
 }
 
@@ -69,31 +100,31 @@ void writeNum(int value) {
 void writeDig(int value, int pos) {
   // Specifies position on the display
   switch (pos) {
-    case 1:     // leftmost digit
+    case 0:     // leftmost digit
       digitalWrite(D1, LOW);
       digitalWrite(D2, HIGH);
       digitalWrite(D3, HIGH);
       digitalWrite(D4, HIGH);
       break;
-    case 2:     // middle-left digit
+    case 1:     // middle-left digit
       digitalWrite(D1, HIGH);
       digitalWrite(D2, LOW);
       digitalWrite(D3, HIGH);
       digitalWrite(D4, HIGH);
       break;
-    case 3:     // middle-right digit
+    case 2:     // middle-right digit
       digitalWrite(D1, HIGH);
       digitalWrite(D2, HIGH);
       digitalWrite(D3, LOW);
       digitalWrite(D4, HIGH);
       break; 
-    default:  // default to rightmost digit
+    case 3:  // rightmost digit
       digitalWrite(D1, HIGH);
       digitalWrite(D2, HIGH);
       digitalWrite(D3, HIGH);
       digitalWrite(D4, LOW);
       break;   
-  }
+  }  
 
   // Specifies LED status for numeral values from 0 through 9.
   switch (value) {
@@ -105,6 +136,7 @@ void writeDig(int value, int pos) {
       digitalWrite(pinE, HIGH);
       digitalWrite(pinF, HIGH);
       digitalWrite(pinG, LOW);
+      delay(1);   // This is needed to reduce ghosting
       break;
     case 1:
       digitalWrite(pinA, LOW);
@@ -114,6 +146,7 @@ void writeDig(int value, int pos) {
       digitalWrite(pinE, LOW);
       digitalWrite(pinF, LOW);
       digitalWrite(pinG, LOW);
+      delay(1);   // This is needed to reduce ghosting
       break;  
     case 2:
       digitalWrite(pinA, HIGH);
@@ -123,6 +156,7 @@ void writeDig(int value, int pos) {
       digitalWrite(pinE, HIGH);
       digitalWrite(pinF, LOW);
       digitalWrite(pinG, HIGH);
+      delay(1);   // This is needed to reduce ghosting
       break;  
     case 3:
       digitalWrite(pinA, HIGH);
@@ -132,6 +166,7 @@ void writeDig(int value, int pos) {
       digitalWrite(pinE, LOW);
       digitalWrite(pinF, LOW);
       digitalWrite(pinG, HIGH);
+      delay(1);   // This is needed to reduce ghosting
       break;  
     case 4:
       digitalWrite(pinA, LOW);
@@ -141,6 +176,7 @@ void writeDig(int value, int pos) {
       digitalWrite(pinE, LOW);
       digitalWrite(pinF, HIGH);
       digitalWrite(pinG, HIGH);
+      delay(1);   // This is needed to reduce ghosting
       break;  
     case 5:
       digitalWrite(pinA, HIGH);
@@ -150,6 +186,7 @@ void writeDig(int value, int pos) {
       digitalWrite(pinE, LOW);
       digitalWrite(pinF, HIGH);
       digitalWrite(pinG, HIGH);
+      delay(1);   // This is needed to reduce ghosting
       break;  
     case 6:
       digitalWrite(pinA, HIGH);
@@ -159,6 +196,7 @@ void writeDig(int value, int pos) {
       digitalWrite(pinE, HIGH);
       digitalWrite(pinF, HIGH);
       digitalWrite(pinG, HIGH);
+      delay(1);   // This is needed to reduce ghosting
       break;  
     case 7:  
       digitalWrite(pinA, HIGH);
@@ -168,6 +206,7 @@ void writeDig(int value, int pos) {
       digitalWrite(pinE, LOW);
       digitalWrite(pinF, LOW);
       digitalWrite(pinG, LOW);
+      delay(1);   // This is needed to reduce ghosting
       break;  
     case 8:
       digitalWrite(pinA, HIGH);
@@ -177,6 +216,7 @@ void writeDig(int value, int pos) {
       digitalWrite(pinE, HIGH);
       digitalWrite(pinF, HIGH);
       digitalWrite(pinG, HIGH);
+      delay(1);   // This is needed to reduce ghosting
       break;  
     case 9: 
       digitalWrite(pinA, HIGH);
@@ -186,8 +226,9 @@ void writeDig(int value, int pos) {
       digitalWrite(pinE, LOW);
       digitalWrite(pinF, HIGH);
       digitalWrite(pinG, HIGH); 
+      delay(1);   // This is needed to reduce ghosting
       break;
-    default:              // default to a "-" sign as a kind of error message
+    default:    // default to a "-" sign as a kind of error message
       digitalWrite(pinA, LOW);
       digitalWrite(pinB, LOW);
       digitalWrite(pinC, LOW);
@@ -195,5 +236,6 @@ void writeDig(int value, int pos) {
       digitalWrite(pinE, LOW);
       digitalWrite(pinF, LOW);
       digitalWrite(pinG, HIGH);
+      delay(1);   // This is needed to reduce ghosting
   }    
 }
